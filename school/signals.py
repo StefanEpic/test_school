@@ -5,7 +5,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from school.models import Group, Client, Product
-from school.utils.signals import split_list
+from school.utils.signals import split_list_by_sublist
 
 
 @receiver(m2m_changed, sender=Product.clients.through)
@@ -32,8 +32,13 @@ def assign_user_to_group(instance, action, pk_set, **kwargs) -> None:
             product_clients = Client.objects.filter(products=product)
             for client in product_clients:
                 client.groups.clear()
-            split_clients_by_group = split_list(product_clients, len(groups))
+            split_clients_by_group = split_list_by_sublist(
+                product_clients, len(groups), product.min_group_clients, product.max_group_clients
+            )
+            len_split_clients_by_group = len(split_clients_by_group)
             split_clients_index = 0
             for group in groups:
                 group.clients.add(*split_clients_by_group[split_clients_index])
                 split_clients_index += 1
+                if len_split_clients_by_group == split_clients_index:
+                    break
